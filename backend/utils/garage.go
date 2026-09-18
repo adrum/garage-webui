@@ -40,38 +40,59 @@ func (g *garage) LoadConfig() error {
 	return nil
 }
 
-func (g *garage) GetAdminEndpoint() string {
-	endpoint := os.Getenv("API_BASE_URL")
-	if len(endpoint) > 0 {
-		return endpoint
+// resolveEndpoint returns the base URL for a Garage API and, when it is
+// served over a unix domain socket, the socket path.
+func (g *garage) resolveEndpoint(envKey string, bindAddr string) (string, string) {
+	endpoint := os.Getenv(envKey)
+	if len(endpoint) == 0 {
+		endpoint = bindAddr
+		if _, ok := UnixSocketPath(bindAddr); !ok {
+			host := strings.Split(g.Config.RPCPublicAddr, ":")[0]
+			port := LastString(strings.Split(bindAddr, ":"))
+			endpoint = fmt.Sprintf("%s:%s", host, port)
+		}
 	}
 
-	host := strings.Split(g.Config.RPCPublicAddr, ":")[0]
-	port := LastString(strings.Split(g.Config.Admin.APIBindAddr, ":"))
+	if path, ok := UnixSocketPath(endpoint); ok {
+		return SocketBaseURL, path
+	}
 
-	endpoint = fmt.Sprintf("%s:%s", host, port)
 	if !strings.HasPrefix(endpoint, "http") {
 		endpoint = fmt.Sprintf("http://%s", endpoint)
 	}
 
+	return endpoint, ""
+}
+
+func (g *garage) GetAdminEndpoint() string {
+	endpoint, _ := g.resolveEndpoint("API_BASE_URL", g.Config.Admin.APIBindAddr)
 	return endpoint
 }
 
+// GetAdminSocket returns the admin API unix socket path, if any.
+func (g *garage) GetAdminSocket() string {
+	_, socket := g.resolveEndpoint("API_BASE_URL", g.Config.Admin.APIBindAddr)
+	return socket
+}
+
+// GetAdminTransport returns the HTTP transport for the admin API, or nil to
+// use the default transport.
+func (g *garage) GetAdminTransport() http.RoundTripper {
+	if socket := g.GetAdminSocket(); len(socket) > 0 {
+		return UnixTransport(socket)
+	}
+	return nil
+}
+
 func (g *garage) GetS3Endpoint() string {
-	endpoint := os.Getenv("S3_ENDPOINT_URL")
-	if len(endpoint) > 0 {
-		return endpoint
-	}
-
-	host := strings.Split(g.Config.RPCPublicAddr, ":")[0]
-	port := LastString(strings.Split(g.Config.S3API.APIBindAddr, ":"))
-
-	endpoint = fmt.Sprintf("%s:%s", host, port)
-	if !strings.HasPrefix(endpoint, "http") {
-		endpoint = fmt.Sprintf("http://%s", endpoint)
-	}
-
+	endpoint, _ := g.resolveEndpoint("S3_ENDPOINT_URL", g.Config.S3API.APIBindAddr)
 	return endpoint
+}
+
+// GetS3Socket returns the S3 API unix socket path, if any.
+func (g *garage) GetS3Socket() string {
+	_, socket := g.resolveEndpoint("S3_ENDPOINT_URL", g.Config.S3API.APIBindAddr)
+	return socket
 }
 
 func (g *garage) GetS3Region() string {
@@ -139,7 +160,7 @@ func (g *garage) Fetch(url string, options *FetchOptions) ([]byte, error) {
 		}
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Transport: g.GetAdminTransport()}
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err

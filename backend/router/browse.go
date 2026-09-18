@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -339,6 +340,14 @@ func getS3Client(bucket string) (*s3.Client, error) {
 	awsConfig := aws.Config{
 		Credentials: creds,
 		Region:      utils.Garage.GetS3Region(),
+	}
+
+	// Route requests through the unix socket if S3 API is bound to one
+	if socket := utils.Garage.GetS3Socket(); len(socket) > 0 {
+		awsConfig.HTTPClient = awshttp.NewBuildableClient().WithTransportOptions(func(t *http.Transport) {
+			t.Proxy = nil
+			t.DialContext = utils.UnixDialer(socket)
+		})
 	}
 
 	// Build S3 client with custom endpoint resolver for proper signing

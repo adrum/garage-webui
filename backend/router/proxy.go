@@ -17,6 +17,7 @@ func ProxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxy := &httputil.ReverseProxy{
+		Transport: utils.Garage.GetAdminTransport(),
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(target)
 			r.Out.URL.Path = strings.TrimPrefix(r.In.URL.Path, "/api")
