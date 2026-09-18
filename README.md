@@ -148,6 +148,10 @@ Configurable envs:
 - `API_ADMIN_KEY`: Admin API key.
 - `S3_REGION`: S3 Region.
 - `S3_ENDPOINT_URL`: S3 Endpoint url.
+- `HOST`: Address to listen on. Defaults to `0.0.0.0`.
+- `PORT`: Port to listen on. Defaults to `3909`.
+- `SOCKET_PATH`: Listen on a unix domain socket at this path instead of `HOST` & `PORT`.
+- `SOCKET_MODE`: Optional octal file mode for the socket, e.g. `660`.
 
 ### Authentication
 
