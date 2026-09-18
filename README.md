@@ -144,10 +144,16 @@ Configurable envs:
 
 - `CONFIG_PATH`: Path to the Garage `config.toml` file. Defaults to `/etc/garage.toml`.
 - `BASE_PATH`: Base path or prefix for Web UI.
-- `API_BASE_URL`: Garage admin API endpoint URL.
+- `API_BASE_URL`: Garage admin API endpoint URL. Use `unix:///path/to/admin.sock` to connect over a unix domain socket.
 - `API_ADMIN_KEY`: Admin API key.
 - `S3_REGION`: S3 Region.
-- `S3_ENDPOINT_URL`: S3 Endpoint url.
+- `S3_ENDPOINT_URL`: S3 Endpoint url. Use `unix:///path/to/s3.sock` to connect over a unix domain socket.
+- `HOST`: Address to listen on. Defaults to `0.0.0.0`.
+- `PORT`: Port to listen on. Defaults to `3909`.
+- `SOCKET_PATH`: Listen on a unix domain socket at this path instead of `HOST` & `PORT`.
+- `SOCKET_MODE`: Optional octal file mode for the socket, e.g. `660`.
+
+If `admin.api_bind_addr` or `s3_api.api_bind_addr` in the Garage config is a unix socket path, the Web UI connects through it automatically.
 
 ### Authentication
 
